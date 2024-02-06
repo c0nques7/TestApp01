@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics.Metrics;
 using System.Management.Automation;
 using System.Threading;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ConsoleApp
 {
@@ -33,15 +36,28 @@ namespace ConsoleApp
                 using (PowerShell ps = PowerShell.Create())
                 {
                     ps.AddScript(@"
-                            $domainName = 'yourdomain.com'
-                            $usernameRange = '" + usernameRange + @"'
-                            $users = Get-ADUser -Filter {SamAccountName -like 'TL' + $usernameRange + '*'} -SearchBase ""DC=$domainName"" -Properties LastLogon
+                            $usernameExtension = Read-Host "Enter the 6 - digit extension for the username"
+    $username = "TL$usernameExtension"
 
-                            foreach ($user in $users) {
-                                $lastLogonTime = [DateTime]::FromFileTime($user.LastLogon)
-                                Write-Host ""User: $($user.Name) | Last Logon: $lastLogonTime""
-                            }
-                            ");
+    $filter = "SamAccountName -eq `'$username`'"
+    $user = Get - ADUser - Filter $filter - Properties LastLogon
+
+    if ($user - and $user.LastLogon) {
+        $lastLogonTime = [DateTime]::FromFileTime($user.LastLogon)
+        Write - Host "User: $($user.Name) | Last Logon: $($lastLogonTime.ToString('g'))"
+    }
+                    elseif($user) {
+                        Write - Host "User: $($user.Name) | Last Logon: Not available"
+    } else
+                    {
+                        Write - Host "User with username '$username' not found."
+    }
+                }
+catch
+            {
+                Write - Host "An error occurred: $($_.Exception.Message)"
+}
+            ");
                     ps.Invoke();
                 }
 
